@@ -1,0 +1,5 @@
+ifconfig eth0 10.0.2.20/24 up
+ip route add default via 10.0.2.1
+
+# Inicia um servidor HTTP basico para testes
+python3 -m http.server 80 &

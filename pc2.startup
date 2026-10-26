@@ -1,0 +1,6 @@
+# Define o endereço MAC estático antes de subir a interface
+ifconfig eth0 hw ether 9a:1e:74:aa:da:44
+
+# Configura o IP e Gateway
+ifconfig eth0 10.0.1.11/24 up
+route add default gw 10.0.1.1

@@ -1,0 +1,54 @@
+# Configuracao de IP nas interfaces
+ifconfig eth0 198.51.100.1/30 up   # WAN
+ifconfig eth1 10.0.1.1/24 up   # LAN
+ifconfig eth2 10.0.2.1/24 up   # DMZ
+ifconfig eth3 10.0.3.1/24 up   # MGMT
+
+# Rota padrao para a Internet via r0
+ip route add default via 198.51.100.2
+
+#Limpeza de regras anteriores
+iptables -F
+iptables -X
+iptables -t nat -F
+
+#Politica Padrao: BLOQUEAR POR PADRAO (Default Deny)
+iptables -P INPUT DROP
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD DROP
+
+# Permitir retorno de conexoes ja ESTABELECIDAS ou RELACIONADAS
+iptables -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# -------------------------------------------------------------
+# REGRAS INTERNAS (LAN / DMZ)
+# -------------------------------------------------------------
+# Permite consultas DNS da LAN para o servidor DNS da DMZ (10.0.2.11)
+iptables -A FORWARD -i eth1 -o eth2 -s 10.0.1.0/24 -d 10.0.2.11 -p udp --dport 53 -j ACCEPT
+
+# -------------------------------------------------------------
+# FLUXOS PERMITIDOS DE SAÍDA (Egress) - Permite atualização do APT nos nós
+# -------------------------------------------------------------
+# Regras para o nó 'proxy' (10.0.1.20) acessar repositórios e DNS
+iptables -A FORWARD -i eth1 -o eth0 -s 10.0.1.20 -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -s 10.0.1.20 -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -s 10.0.1.20 -p udp --dport 53 -m conntrack --ctstate NEW -j ACCEPT
+
+# Regras para o nó 'rp' (10.0.2.10) acessar repositórios e DNS
+iptables -A FORWARD -i eth2 -o eth0 -s 10.0.2.10 -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A FORWARD -i eth2 -o eth0 -s 10.0.2.10 -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A FORWARD -i eth2 -o eth0 -s 10.0.2.10 -p udp --dport 53 -m conntrack --ctstate NEW -j ACCEPT
+
+# -------------------------------------------------------------
+# FLUXOS PERMITIDOS DE ENTRADA (Ingress)
+# -------------------------------------------------------------
+# Permite tráfego HTTP da Internet EXCLUSIVAMENTE para o NGINX (rp - 10.0.2.10)
+iptables -A FORWARD -i eth0 -o eth2 -d 10.0.2.10 -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+
+# Permite tráfego HTTP do nó adm para o NGINX (rp - 10.0.2.10)
+iptables -A FORWARD -i eth3 -o eth2 -d 10.0.2.10 -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+
+
+# OBSERVAÇÃO CRÍTICA:
+# Conexões diretas da Internet para 'web' (10.0.2.20) são BLOQUEADAS pelo FORWARD DROP.
+# Conexões diretas das estações da LAN para a Internet (sem passar pelo Squid) são BLOQUEADAS.

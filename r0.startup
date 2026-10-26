@@ -1,0 +1,10 @@
+# Interface para a WAN (conexão com o firewall)
+ifconfig eth0 198.51.100.2/30 up
+
+# Rota para as redes internas através do firewall (198.51.100.1)
+route add -net 10.0.1.0/24 gw 198.51.100.1
+route add -net 10.0.2.0/24 gw 198.51.100.1
+route add -net 10.0.3.0/24 gw 198.51.100.1
+
+# NAT de saída para simular acesso à Internet
+iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE

@@ -1,0 +1,2 @@
+ifconfig eth0 10.0.1.10/24 up
+ip route add default via 10.0.1.1

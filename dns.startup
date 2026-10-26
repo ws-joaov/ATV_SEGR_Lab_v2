@@ -1,0 +1,5 @@
+ifconfig eth0 10.0.2.11/24 up
+ip route add default via 10.0.2.1
+
+# Inicia o servico simulado de DNS em segundo plano
+nc -l -u -p 53 &
